@@ -1,5 +1,6 @@
 package com.spring.guardadoc.model;
 
+import com.spring.guardadoc.dto.DadosCadastroUsuario;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -35,5 +36,12 @@ public class Usuario {
 
     public Usuario(Long id) {
         this.id = id;
+    }
+
+    public Usuario(DadosCadastroUsuario dados) {
+        this.nome = dados.nome();
+        this.email = dados.email();
+        this.senha = dados.senha();
+        // Inicialize outros campos conforme necessário
     }
 }

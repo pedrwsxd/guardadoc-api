@@ -39,6 +39,10 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/documentos").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login/admin").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "pedidos/usuario/**").hasRole("CLIENTE")
