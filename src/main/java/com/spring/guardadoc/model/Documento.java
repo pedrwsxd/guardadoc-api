@@ -20,7 +20,7 @@ public class Documento {
     @Column(nullable = false)
     private String tipo;
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, name = "dados", length = 5000)
     private byte[] dados;
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)

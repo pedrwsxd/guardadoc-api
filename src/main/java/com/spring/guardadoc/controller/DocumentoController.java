@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 public class DocumentoController {
 
     private final DocumentoService documentoService;
-
     private final QRCodeService qrCodeService;
 
     public DocumentoController(DocumentoService documentoService, QRCodeService qrCodeService) {
@@ -36,24 +35,22 @@ public class DocumentoController {
 
     // Endpoint para upload de documento
     @PostMapping("/upload")
-    public ResponseEntity<?> uploadDocumento(@RequestParam("file") @NotNull MultipartFile file, @RequestParam("usuarioId") @NotNull String usuarioId) {
+    public ResponseEntity<?> uploadDocumento(@RequestParam("file") @NotNull MultipartFile file,
+                                             @RequestParam("usuarioId") @NotNull Long usuarioId) {
         try {
-            Long userId = Long.parseLong(usuarioId);
             Documento documento = new Documento();
             documento.setNome(file.getOriginalFilename());
             documento.setTipo(file.getContentType());
             documento.setDados(file.getBytes());
-            Optional<Usuario> usuarioOpt = documentoService.encontrarUsuarioPorId(userId);
+
+            Optional<Usuario> usuarioOpt = documentoService.encontrarUsuarioPorId(usuarioId);
             if (usuarioOpt.isPresent()) {
-                Usuario usuario = usuarioOpt.get();
-                documento.setUsuario(usuario);
+                documento.setUsuario(usuarioOpt.get());
                 Documento novoDocumento = documentoService.salvarDocumento(documento);
-                return new ResponseEntity<>(novoDocumento, HttpStatus.CREATED);
+                return new ResponseEntity<>(new DocumentoDTO(novoDocumento.getId(), novoDocumento.getNome()), HttpStatus.CREATED);
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuário não encontrado.");
             }
-        } catch (NumberFormatException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("ID do usuário deve ser um número.");
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao processar o arquivo.");
         }
@@ -71,38 +68,41 @@ public class DocumentoController {
 
     // Endpoint para obter documento pelo ID
     @GetMapping("/{id}")
-    public ResponseEntity<?> obterDocumentoPorId(@PathVariable @NotNull String id) { // Alterado para String
-        try {
-            Long docId = Long.parseLong(id); // Conversão para Long
-            Optional<Documento> documento = documentoService.encontrarPorId(docId);
-            return documento.map(doc -> ResponseEntity.ok(new DocumentoDTO(doc.getId(), doc.getNome())))
-                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
-        } catch (NumberFormatException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("ID do documento deve ser um número.");
+    public ResponseEntity<?> obterDocumentoPorId(@PathVariable @NotNull Long id) {
+        Optional<Documento> documentoOpt = documentoService.encontrarPorId(id);
+        if (documentoOpt.isPresent()) {
+            Documento documento = documentoOpt.get();
+            DocumentoDTO documentoDTO = new DocumentoDTO(documento.getId(), documento.getNome());
+            return ResponseEntity.ok(documentoDTO);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Documento não encontrado.");
         }
     }
 
+    // Endpoint para atualizar documento
     @PutMapping("/{id}")
-    public ResponseEntity<?> atualizarDocumento(@PathVariable @NotNull String
-                                                        id, @RequestParam("file") MultipartFile file,
-                                                @RequestParam("usuarioId") @NotNull String usuarioId) {
+    public ResponseEntity<?> atualizarDocumento(@PathVariable @NotNull Long id,
+                                                @RequestParam("file") MultipartFile file,
+                                                @RequestParam("usuarioId") @NotNull Long usuarioId) {
         try {
-            Long docId = Long.parseLong(id);
-            Long userId = Long.parseLong(usuarioId);
-            Optional<Documento> documentoExistente = documentoService.encontrarPorId(docId);
-            if (documentoExistente.isPresent()) {
-                Documento documento = documentoExistente.get();
+            Optional<Documento> documentoOpt = documentoService.encontrarPorId(id);
+            if (documentoOpt.isPresent()) {
+                Documento documento = documentoOpt.get();
                 documento.setNome(file.getOriginalFilename());
                 documento.setTipo(file.getContentType());
                 documento.setDados(file.getBytes());
-                documento.setUsuario(new Usuario(userId));
-                Documento documentoAtualizado = documentoService.salvarDocumento(documento);
-                return ResponseEntity.ok(documentoAtualizado);
+
+                Optional<Usuario> usuarioOpt = documentoService.encontrarUsuarioPorId(usuarioId);
+                if (usuarioOpt.isPresent()) {
+                    documento.setUsuario(usuarioOpt.get());
+                    Documento documentoAtualizado = documentoService.salvarDocumento(documento);
+                    return ResponseEntity.ok(new DocumentoDTO(documentoAtualizado.getId(), documentoAtualizado.getNome()));
+                } else {
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuário não encontrado.");
+                }
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Documento não encontrado.");
             }
-        } catch (NumberFormatException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("ID deve ser um número.");
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao processar o arquivo.");
         }
@@ -110,39 +110,37 @@ public class DocumentoController {
 
     // Endpoint para deletar documento pelo ID
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletarDocumento(@PathVariable @NotNull String id) { // Alterado para String
-        try {
-            Long docId = Long.parseLong(id); // Conversão para Long
-            documentoService.deletarDocumento(docId);
+    public ResponseEntity<Void> deletarDocumento(@PathVariable @NotNull Long id) {
+        Optional<Documento> documentoOpt = documentoService.encontrarPorId(id);
+        if (documentoOpt.isPresent()) {
+            documentoService.deletarDocumento(id);
             return ResponseEntity.noContent().build();
-        } catch (NumberFormatException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
-
     }
 
+    // Endpoint para gerar QR Code para um documento específico
     @GetMapping("/{id}/qrcode")
-    public ResponseEntity<byte[]> generateQRCode(@PathVariable String id) {
-        try {
-            Long docId = Long.parseLong(id);
-            Optional<Documento> documento = documentoService.encontrarPorId(docId);
-            if (documento.isPresent()) {
+    public ResponseEntity<byte[]> generateQRCode(@PathVariable @NotNull Long id) {
+        Optional<Documento> documentoOpt = documentoService.encontrarPorId(id);
+        if (documentoOpt.isPresent()) {
+            try {
                 String baseUrl = "http://localhost:8080/api/documentos/";
                 String qrContent = baseUrl + id;
                 BufferedImage qrCodeImage = qrCodeService.generateQRCodeImage(qrContent);
                 ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
                 ImageIO.write(qrCodeImage, "PNG", pngOutputStream);
                 byte[] qrCodeBytes = pngOutputStream.toByteArray();
+
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.IMAGE_PNG);
                 return new ResponseEntity<>(qrCodeBytes, headers, HttpStatus.OK);
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
             }
-        } catch (NumberFormatException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
     }
 }

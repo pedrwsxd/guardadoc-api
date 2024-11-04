@@ -13,31 +13,39 @@ import java.util.Optional;
 
 @Service
 public class DocumentoService {
-    @Autowired
-    private DocumentoRepository documentoRepository;
+
+    private final DocumentoRepository documentoRepository;
+    private final UsuarioRepository usuarioRepository;
 
     @Autowired
-    private UsuarioRepository usuarioRepository;
+    public DocumentoService(DocumentoRepository documentoRepository, UsuarioRepository usuarioRepository) {
+        this.documentoRepository = documentoRepository;
+        this.usuarioRepository = usuarioRepository;
+    }
 
+    // Salva um documento no repositório
     public Documento salvarDocumento(Documento documento) {
         return documentoRepository.save(documento);
     }
 
+    // Encontra um documento pelo seu ID
     public Optional<Documento> encontrarPorId(Long id) {
         return documentoRepository.findById(id);
     }
 
-    @Transactional
+    // Encontra todos os documentos associados a um usuário específico
+    @Transactional(readOnly = true)
     public List<Documento> encontrarPorUsuarioId(Long usuarioId) {
         return documentoRepository.findByUsuarioId(usuarioId);
     }
 
+    // Deleta um documento pelo seu ID
     public void deletarDocumento(Long id) {
         documentoRepository.deleteById(id);
     }
 
+    // Encontra um usuário pelo seu ID
     public Optional<Usuario> encontrarUsuarioPorId(Long id) {
         return usuarioRepository.findById(id);
     }
-
 }

@@ -43,11 +43,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/usuarios/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/documentos").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/login/admin").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "pedidos/usuario/**").hasRole("CLIENTE")
-                        .requestMatchers(HttpMethod.GET, "usuarios/listar/**").hasAnyRole("CLIENTE", "ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/usuarios/atualizar/").hasRole("CLIENTE")
 
 
                         .anyRequest().authenticated()
