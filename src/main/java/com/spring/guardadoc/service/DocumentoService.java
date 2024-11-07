@@ -23,28 +23,56 @@ public class DocumentoService {
         this.usuarioRepository = usuarioRepository;
     }
 
-    // Salva um documento no repositório
-    public Documento salvarDocumento(Documento documento) {
-        return documentoRepository.save(documento);
+    /**
+     * Salva um documento associado a um usuário específico.
+     * @param documento O documento a ser salvo.
+     * @param usuarioId O ID do usuário ao qual o documento pertence.
+     * @return O documento salvo.
+     */
+    @Transactional
+    public Documento salvarDocumento(Documento documento, Long usuarioId) {
+        Optional<Usuario> usuario = usuarioRepository.findById(usuarioId);
+        if (usuario.isPresent()) {
+            documento.setUsuario(usuario.get());
+            return documentoRepository.save(documento);
+        } else {
+            throw new IllegalArgumentException("Usuário não encontrado com ID: " + usuarioId);
+        }
     }
 
-    // Encontra um documento pelo seu ID
+    /**
+     * Encontra um documento pelo seu ID.
+     * @param id O ID do documento.
+     * @return O documento encontrado, se existir.
+     */
     public Optional<Documento> encontrarPorId(Long id) {
         return documentoRepository.findById(id);
     }
 
-    // Encontra todos os documentos associados a um usuário específico
+    /**
+     * Encontra todos os documentos associados a um usuário específico.
+     * @param usuarioId O ID do usuário.
+     * @return A lista de documentos do usuário.
+     */
     @Transactional(readOnly = true)
     public List<Documento> encontrarPorUsuarioId(Long usuarioId) {
         return documentoRepository.findByUsuarioId(usuarioId);
     }
 
-    // Deleta um documento pelo seu ID
+    /**
+     * Deleta um documento pelo seu ID.
+     * @param id O ID do documento.
+     */
+    @Transactional
     public void deletarDocumento(Long id) {
         documentoRepository.deleteById(id);
     }
 
-    // Encontra um usuário pelo seu ID
+    /**
+     * Encontra um usuário pelo seu ID.
+     * @param id O ID do usuário.
+     * @return O usuário encontrado, se existir.
+     */
     public Optional<Usuario> encontrarUsuarioPorId(Long id) {
         return usuarioRepository.findById(id);
     }

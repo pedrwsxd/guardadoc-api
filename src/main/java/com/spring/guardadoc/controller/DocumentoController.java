@@ -2,7 +2,6 @@ package com.spring.guardadoc.controller;
 
 import com.spring.guardadoc.dto.DocumentoDTO;
 import com.spring.guardadoc.model.Documento;
-import com.spring.guardadoc.model.Usuario;
 import com.spring.guardadoc.service.DocumentoService;
 import com.spring.guardadoc.service.QRCodeService;
 import jakarta.validation.constraints.NotNull;
@@ -43,14 +42,8 @@ public class DocumentoController {
             documento.setTipo(file.getContentType());
             documento.setDados(file.getBytes());
 
-            Optional<Usuario> usuarioOpt = documentoService.encontrarUsuarioPorId(usuarioId);
-            if (usuarioOpt.isPresent()) {
-                documento.setUsuario(usuarioOpt.get());
-                Documento novoDocumento = documentoService.salvarDocumento(documento);
-                return new ResponseEntity<>(new DocumentoDTO(novoDocumento.getId(), novoDocumento.getNome()), HttpStatus.CREATED);
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuário não encontrado.");
-            }
+            Documento novoDocumento = documentoService.salvarDocumento(documento, usuarioId);
+            return new ResponseEntity<>(new DocumentoDTO(novoDocumento.getId(), novoDocumento.getNome()), HttpStatus.CREATED);
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao processar o arquivo.");
         }
@@ -92,14 +85,8 @@ public class DocumentoController {
                 documento.setTipo(file.getContentType());
                 documento.setDados(file.getBytes());
 
-                Optional<Usuario> usuarioOpt = documentoService.encontrarUsuarioPorId(usuarioId);
-                if (usuarioOpt.isPresent()) {
-                    documento.setUsuario(usuarioOpt.get());
-                    Documento documentoAtualizado = documentoService.salvarDocumento(documento);
-                    return ResponseEntity.ok(new DocumentoDTO(documentoAtualizado.getId(), documentoAtualizado.getNome()));
-                } else {
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuário não encontrado.");
-                }
+                Documento documentoAtualizado = documentoService.salvarDocumento(documento, usuarioId);
+                return ResponseEntity.ok(new DocumentoDTO(documentoAtualizado.getId(), documentoAtualizado.getNome()));
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Documento não encontrado.");
             }

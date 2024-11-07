@@ -1,7 +1,9 @@
 package com.spring.guardadoc.model;
 
+import com.spring.guardadoc.dto.DadosAtualizacaoUsuario;
 import com.spring.guardadoc.dto.DadosCadastroUsuario;
 import jakarta.persistence.*;
+import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -38,10 +40,29 @@ public class Usuario {
         this.id = id;
     }
 
-    public Usuario(DadosCadastroUsuario dados) {
-        this.nome = dados.nome();
-        this.email = dados.email();
-        this.senha = dados.senha();
-        // Inicialize outros campos conforme necessário
+
+    public void atualizarInformacoes(@Valid DadosAtualizacaoUsuario dados) {
+        if (dados.nome() != null) {
+            this.setNome(dados.nome());
+        }
+        if (dados.telefone() != null) {
+            this.setTelefone(dados.telefone());
+        }
+        if (dados.email() != null) {
+            this.setEmail(dados.email());
+        }
+        if (dados.senha() != null) {
+            this.setSenha(dados.senha());
+        }
+        if (dados.roles() != null && !dados.roles().isEmpty()) {
+            this.setRoles(dados.roles());
+        }
     }
+    public Usuario(DadosCadastroUsuario dados) {
+    this.nome = dados.nome();
+    this.email = dados.email();
+    this.senha = dados.senha();
+    this.telefone = dados.telefone();
+    // Inicialize outros campos conforme necessário
+}
 }

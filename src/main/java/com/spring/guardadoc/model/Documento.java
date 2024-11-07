@@ -15,14 +15,21 @@ public class Documento {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(nullable = false)
     private String nome;
+
     @Column(nullable = false)
     private String tipo;
+
     @Lob
-    @Column(nullable = false, name = "dados", length = 5000)
+    @Column(nullable = false, columnDefinition = "LONGBLOB")
     private byte[] dados;
+
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
+
+    @Column(nullable = true)
+    private String caminhoArquivo;
 }
