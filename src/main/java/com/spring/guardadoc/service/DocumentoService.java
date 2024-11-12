@@ -7,7 +7,9 @@ import com.spring.guardadoc.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,63 +18,57 @@ public class DocumentoService {
 
     private final DocumentoRepository documentoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final S3Service s3Service;
 
     @Autowired
-    public DocumentoService(DocumentoRepository documentoRepository, UsuarioRepository usuarioRepository) {
+    public DocumentoService(DocumentoRepository documentoRepository, UsuarioRepository usuarioRepository, S3Service s3Service) {
         this.documentoRepository = documentoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.s3Service = s3Service;
     }
 
-    /**
-     * Salva um documento associado a um usuário específico.
-     * @param documento O documento a ser salvo.
-     * @param usuarioId O ID do usuário ao qual o documento pertence.
-     * @return O documento salvo.
-     */
     @Transactional
-    public Documento salvarDocumento(Documento documento, Long usuarioId) {
+    public Documento salvarDocumento(MultipartFile file, Long usuarioId) {
         Optional<Usuario> usuario = usuarioRepository.findById(usuarioId);
-        if (usuario.isPresent()) {
-            documento.setUsuario(usuario.get());
-            return documentoRepository.save(documento);
-        } else {
+        if (usuario.isEmpty()) {
             throw new IllegalArgumentException("Usuário não encontrado com ID: " + usuarioId);
+        }
+
+        try {
+            String caminhoArquivo = s3Service.uploadFile(file.getOriginalFilename(), file.getBytes());
+
+            Documento documento = new Documento();
+            documento.setNome(file.getOriginalFilename());
+            documento.setTipo(file.getContentType());
+            documento.setUsuario(usuario.get());
+            documento.setCaminhoArquivo(caminhoArquivo);
+
+            return documentoRepository.save(documento);
+        } catch (IOException e) {
+            throw new RuntimeException("Erro ao salvar o documento no S3", e);
         }
     }
 
-    /**
-     * Encontra um documento pelo seu ID.
-     * @param id O ID do documento.
-     * @return O documento encontrado, se existir.
-     */
+    @Transactional
+    public Documento atualizarDocumento(Documento documento) {
+        return documentoRepository.save(documento);
+    }
+
+
     public Optional<Documento> encontrarPorId(Long id) {
         return documentoRepository.findById(id);
     }
 
-    /**
-     * Encontra todos os documentos associados a um usuário específico.
-     * @param usuarioId O ID do usuário.
-     * @return A lista de documentos do usuário.
-     */
     @Transactional(readOnly = true)
     public List<Documento> encontrarPorUsuarioId(Long usuarioId) {
         return documentoRepository.findByUsuarioId(usuarioId);
     }
 
-    /**
-     * Deleta um documento pelo seu ID.
-     * @param id O ID do documento.
-     */
     @Transactional
     public void deletarDocumento(Long id) {
         documentoRepository.deleteById(id);
     }
 
-    /**
-     * Encontra um usuário pelo seu ID.
-     * @param id O ID do usuário.
-     * @return O usuário encontrado, se existir.
-     */
     public Optional<Usuario> encontrarUsuarioPorId(Long id) {
         return usuarioRepository.findById(id);
     }

@@ -22,14 +22,11 @@ public class Documento {
     @Column(nullable = false)
     private String tipo;
 
-    @Lob
-    @Column(nullable = false, columnDefinition = "LONGBLOB")
-    private byte[] dados;
-
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
-    @Column(nullable = true)
+    // Armazena o caminho do arquivo no S3
+    @Column(nullable = false)
     private String caminhoArquivo;
 }

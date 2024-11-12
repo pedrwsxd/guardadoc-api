@@ -1,6 +1,7 @@
 package com.spring.guardadoc.controller;
 
 import com.spring.guardadoc.dto.DocumentoDTO;
+import com.spring.guardadoc.dto.DocumentoMapper;
 import com.spring.guardadoc.model.Documento;
 import com.spring.guardadoc.service.DocumentoService;
 import com.spring.guardadoc.service.QRCodeService;
@@ -32,70 +33,58 @@ public class DocumentoController {
         this.qrCodeService = qrCodeService;
     }
 
-    // Endpoint para upload de documento
     @PostMapping("/upload")
     public ResponseEntity<?> uploadDocumento(@RequestParam("file") @NotNull MultipartFile file,
                                              @RequestParam("usuarioId") @NotNull Long usuarioId) {
         try {
-            Documento documento = new Documento();
-            documento.setNome(file.getOriginalFilename());
-            documento.setTipo(file.getContentType());
-            documento.setDados(file.getBytes());
-
-            Documento novoDocumento = documentoService.salvarDocumento(documento, usuarioId);
-            return new ResponseEntity<>(new DocumentoDTO(novoDocumento.getId(), novoDocumento.getNome()), HttpStatus.CREATED);
-        } catch (IOException e) {
+            Documento novoDocumento = documentoService.salvarDocumento(file, usuarioId);
+            return new ResponseEntity<>(DocumentoMapper.toDTO(novoDocumento), HttpStatus.CREATED);
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao processar o arquivo.");
         }
     }
 
-    // Endpoint para listar documentos por usuário
     @GetMapping("/usuario/{usuarioId}")
     public ResponseEntity<List<DocumentoDTO>> listarDocumentosPorUsuario(@PathVariable @NotNull Long usuarioId) {
         List<Documento> documentos = documentoService.encontrarPorUsuarioId(usuarioId);
         List<DocumentoDTO> documentoDTOs = documentos.stream()
-                .map(doc -> new DocumentoDTO(doc.getId(), doc.getNome()))
+                .map(DocumentoMapper::toDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(documentoDTOs);
     }
 
-    // Endpoint para obter documento pelo ID
     @GetMapping("/{id}")
     public ResponseEntity<?> obterDocumentoPorId(@PathVariable @NotNull Long id) {
         Optional<Documento> documentoOpt = documentoService.encontrarPorId(id);
         if (documentoOpt.isPresent()) {
             Documento documento = documentoOpt.get();
-            DocumentoDTO documentoDTO = new DocumentoDTO(documento.getId(), documento.getNome());
+            DocumentoDTO documentoDTO = DocumentoMapper.toDTO(documento);
             return ResponseEntity.ok(documentoDTO);
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Documento não encontrado.");
         }
     }
 
-    // Endpoint para atualizar documento
     @PutMapping("/{id}")
     public ResponseEntity<?> atualizarDocumento(@PathVariable @NotNull Long id,
                                                 @RequestParam("file") MultipartFile file,
                                                 @RequestParam("usuarioId") @NotNull Long usuarioId) {
-        try {
-            Optional<Documento> documentoOpt = documentoService.encontrarPorId(id);
-            if (documentoOpt.isPresent()) {
-                Documento documento = documentoOpt.get();
-                documento.setNome(file.getOriginalFilename());
-                documento.setTipo(file.getContentType());
-                documento.setDados(file.getBytes());
+        Optional<Documento> documentoOpt = documentoService.encontrarPorId(id);
+        if (documentoOpt.isPresent()) {
+            Documento documento = documentoOpt.get();
+            String novoCaminhoArquivo = documentoService.salvarDocumento(file, usuarioId).getCaminhoArquivo();
 
-                Documento documentoAtualizado = documentoService.salvarDocumento(documento, usuarioId);
-                return ResponseEntity.ok(new DocumentoDTO(documentoAtualizado.getId(), documentoAtualizado.getNome()));
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Documento não encontrado.");
-            }
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao processar o arquivo.");
+            documento.setNome(file.getOriginalFilename());
+            documento.setTipo(file.getContentType());
+            documento.setCaminhoArquivo(novoCaminhoArquivo);
+
+            Documento documentoAtualizado = documentoService.atualizarDocumento(documento);
+            return ResponseEntity.ok(DocumentoMapper.toDTO(documentoAtualizado));
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Documento não encontrado.");
         }
     }
 
-    // Endpoint para deletar documento pelo ID
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletarDocumento(@PathVariable @NotNull Long id) {
         Optional<Documento> documentoOpt = documentoService.encontrarPorId(id);
@@ -107,27 +96,6 @@ public class DocumentoController {
         }
     }
 
-    // Endpoint para gerar QR Code para um documento específico
-    @GetMapping("/{id}/qrcode")
-    public ResponseEntity<byte[]> generateQRCode(@PathVariable @NotNull Long id) {
-        Optional<Documento> documentoOpt = documentoService.encontrarPorId(id);
-        if (documentoOpt.isPresent()) {
-            try {
-                String baseUrl = "http://localhost:8080/api/documentos/";
-                String qrContent = baseUrl + id;
-                BufferedImage qrCodeImage = qrCodeService.generateQRCodeImage(qrContent);
-                ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
-                ImageIO.write(qrCodeImage, "PNG", pngOutputStream);
-                byte[] qrCodeBytes = pngOutputStream.toByteArray();
 
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.IMAGE_PNG);
-                return new ResponseEntity<>(qrCodeBytes, headers, HttpStatus.OK);
-            } catch (Exception e) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-            }
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
-    }
+
 }
